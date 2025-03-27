@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Car Price Estimator</title>
+    <!-- Add Chart.js library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.1/chart.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -59,16 +61,94 @@
         .error {
             color: red;
             margin-top: 10px;
+            padding: 10px;
+            background-color: #ffeeee;
+            border-radius: 4px;
+            display: none;
+        }
+        .tip {
+            background-color: #e6f7ff;
+            border-left: 4px solid #1890ff;
+            padding: 12px;
+            margin-top: 15px;
+            margin-bottom: 15px;
+            display: none;
         }
         .loading {
             text-align: center;
             display: none;
+        }
+        .suggestions {
+            background-color: #f0f8ff;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 4px;
+            display: none;
+        }
+        .charts-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .chart-wrapper {
+            flex: 1 1 45%;
+            min-width: 300px;
+            height: 250px;
+            margin-bottom: 10px;
+            padding: 10px;
+            border: 1px solid #eee;
+            border-radius: 4px;
+            background-color: #fff;
+        }
+        .visualization {
+            margin-top: 20px;
+            display: none;
+        }
+        .tab-container {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 15px;
+        }
+        .tab {
+            padding: 10px 15px;
+            cursor: pointer;
+            background-color: #f1f1f1;
+            border: 1px solid #ddd;
+            border-bottom: none;
+            margin-right: 5px;
+            border-radius: 4px 4px 0 0;
+        }
+        .tab.active {
+            background-color: white;
+            border-bottom: 1px solid white;
+            margin-bottom: -1px;
+        }
+        .similar-cars-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        .similar-cars-table th, .similar-cars-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        .similar-cars-table th {
+            background-color: #f2f2f2;
+        }
+        .similar-cars-table tr:nth-child(even) {
+            background-color: #f9f9f9;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Car Price Estimator</h1>
+        
+        <div class="tip" id="recommendedTip">
+            <strong>Recommended combinations:</strong> Try BMW M3 Base (2015), Ford F-150 XLT (2020), or Chevrolet Corvette Base (2020) for best results.
+        </div>
         
         <div class="form-group">
             <label for="brand">Car Brand:</label>
@@ -118,15 +198,85 @@
         
         <div class="error" id="error"></div>
         
+        <div class="suggestions" id="suggestions">
+            <h3>Try these combinations:</h3>
+            <ul>
+                <li><strong>BMW M3 Base</strong> (2015) - 6 similar cars</li>
+                <li><strong>Ford F-150 XLT</strong> (2020) - 19 similar cars</li>
+                <li><strong>Chevrolet Corvette Base</strong> (2020) - Multiple similar cars</li>
+                <li><strong>RAM 1500 Laramie</strong> (2020-2022)</li>
+                <li><strong>Tesla Model Y Long Range</strong> (2020-2022)</li>
+            </ul>
+        </div>
+        
         <div class="result" id="result">
             <h2>Estimated Price: <span id="estimatedPrice">$0</span></h2>
             <p>Based on <span id="similarCars">0</span> similar vehicles</p>
             <p>Price Range: <span id="minPrice">$0</span> - <span id="maxPrice">$0</span></p>
+            
+            <div class="tab-container">
+                <div class="tab active" data-tab="charts">Charts</div>
+                <div class="tab" data-tab="data">Similar Cars Data</div>
+            </div>
+            
+            <div id="chartsTab" class="visualization">
+                <div class="charts-container">
+                    <div class="chart-wrapper">
+                        <canvas id="priceDistChart"></canvas>
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="priceMileageChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="dataTab" class="visualization" style="display:none;">
+                <table class="similar-cars-table" id="similarCarsTable">
+                    <thead>
+                        <tr>
+                            <th>Year</th>
+                            <th>Mileage</th>
+                            <th>Price</th>
+                            <th>Accident</th>
+                            <th>Color</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Similar cars data will be populated here -->
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // Show recommended tip on page load
+            document.getElementById('recommendedTip').style.display = 'block';
+            
+            // Tab switching functionality
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', function() {
+                    // Remove active class from all tabs
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    // Add active class to clicked tab
+                    this.classList.add('active');
+                    
+                    // Hide all tab contents
+                    document.querySelectorAll('.visualization').forEach(content => {
+                        content.style.display = 'none';
+                    });
+                    
+                    // Show selected tab content
+                    const tabName = this.getAttribute('data-tab');
+                    if (tabName === 'charts') {
+                        document.getElementById('chartsTab').style.display = 'block';
+                    } else if (tabName === 'data') {
+                        document.getElementById('dataTab').style.display = 'block';
+                    }
+                });
+            });
+            
             // Load car brands on page load
             fetch('/api/brands')
                 .then(response => response.json())
@@ -141,7 +291,7 @@
                 })
                 .catch(error => {
                     console.error('Error loading brands:', error);
-                    document.getElementById('error').textContent = 'Failed to load car brands.';
+                    showError('Failed to load car brands.');
                 });
             
             // Load models when brand changes
@@ -162,10 +312,25 @@
                                 option.textContent = model;
                                 modelSelect.appendChild(option);
                             });
+                            
+                            // If BMW is selected, pre-select M3 Base as it's known to work
+                            if (brand === 'BMW') {
+                                const m3Option = Array.from(modelSelect.options).find(opt => opt.value === 'M3 Base');
+                                if (m3Option) {
+                                    modelSelect.value = 'M3 Base';
+                                }
+                            }
+                            // If Ford is selected, pre-select F-150 XLT
+                            else if (brand === 'Ford') {
+                                const f150Option = Array.from(modelSelect.options).find(opt => opt.value === 'F-150 XLT');
+                                if (f150Option) {
+                                    modelSelect.value = 'F-150 XLT';
+                                }
+                            }
                         })
                         .catch(error => {
                             console.error('Error loading models:', error);
-                            document.getElementById('error').textContent = 'Failed to load car models.';
+                            showError('Failed to load car models.');
                         });
                 }
             });
@@ -181,13 +346,14 @@
                 
                 // Validate inputs
                 if (!brand || !model || !year) {
-                    document.getElementById('error').textContent = 'Please fill in all required fields (brand, model, year).';
+                    showError('Please fill in all required fields (brand, model, year).');
                     return;
                 }
                 
                 // Clear previous results and errors
-                document.getElementById('error').textContent = '';
+                hideError();
                 document.getElementById('result').style.display = 'none';
+                document.getElementById('suggestions').style.display = 'none';
                 document.getElementById('loading').style.display = 'block';
                 
                 // Send estimate request
@@ -219,9 +385,21 @@
                     document.getElementById('minPrice').textContent = '$' + data.priceRange.min.toLocaleString();
                     document.getElementById('maxPrice').textContent = '$' + data.priceRange.max.toLocaleString();
                     document.getElementById('result').style.display = 'block';
+                    document.getElementById('chartsTab').style.display = 'block';
+                    
+                    // If we have similar cars data, visualize it
+                    if (data.similarCarsData && data.similarCarsData.length > 0) {
+                        visualizePriceDistribution(data.similarCarsData);
+                        visualizePriceVsMileage(data.similarCarsData);
+                        populateSimilarCarsTable(data.similarCarsData);
+                    }
                 })
                 .catch(error => {
-                    document.getElementById('error').textContent = error.message;
+                    showError(error.message);
+                    // If error is about not enough data, show suggestions
+                    if (error.message.includes('Not enough data') || error.message.includes('data to estimate')) {
+                        document.getElementById('suggestions').style.display = 'block';
+                    }
                 })
                 .finally(() => {
                     document.getElementById('loading').style.display = 'none';
@@ -232,7 +410,214 @@
             const yearInput = document.getElementById('year');
             const currentYear = new Date().getFullYear();
             yearInput.max = currentYear;
-            yearInput.value = currentYear - 3; // Default to 3 years old
+            yearInput.value = 2020; // Default to 2020 for more likely matches
+            
+            function showError(message) {
+                const errorElement = document.getElementById('error');
+                errorElement.textContent = message;
+                errorElement.style.display = 'block';
+            }
+            
+            function hideError() {
+                document.getElementById('error').style.display = 'none';
+            }
+            
+            // Function to visualize price distribution
+            function visualizePriceDistribution(carsData) {
+                // Sort cars by price
+                const sortedCars = [...carsData].sort((a, b) => a.price - b.price);
+                
+                // Create labels and data arrays
+                const labels = sortedCars.map((car, index) => `Car ${index + 1}`);
+                const prices = sortedCars.map(car => car.price);
+                
+                // Get the canvas element
+                const ctx = document.getElementById('priceDistChart').getContext('2d');
+                
+                // Clear any existing chart
+                if (window.priceDistChart) {
+                    window.priceDistChart.destroy();
+                }
+                
+                // Create the new chart
+                window.priceDistChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Price Distribution',
+                            data: prices,
+                            backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Price Distribution of Similar Cars'
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const index = context.dataIndex;
+                                        const car = sortedCars[index];
+                                        return [
+                                            `Price: $${car.price.toLocaleString()}`,
+                                            `Year: ${car.model_year}`,
+                                            `Mileage: ${car.milage}`
+                                        ];
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: false,
+                                title: {
+                                    display: true,
+                                    text: 'Price ($)'
+                                },
+                                ticks: {
+                                    callback: function(value) {
+                                        return '$' + value.toLocaleString();
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            
+            // Function to visualize price vs mileage
+            function visualizePriceVsMileage(carsData) {
+                // Create data points for the scatter plot
+                const dataPoints = carsData.map(car => {
+                    // Extract numeric mileage from string like "50,000 mi."
+                    let mileage = 0;
+                    if (car.milage) {
+                        const mileageMatch = car.milage.match(/[\d,]+/);
+                        if (mileageMatch) {
+                            mileage = parseInt(mileageMatch[0].replace(/,/g, ''), 10);
+                        }
+                    }
+                    
+                    return {
+                        x: mileage,
+                        y: car.price,
+                        year: car.model_year,
+                        mileage: car.milage
+                    };
+                });
+                
+                // Get the canvas element
+                const ctx = document.getElementById('priceMileageChart').getContext('2d');
+                
+                // Clear any existing chart
+                if (window.priceMileageChart) {
+                    window.priceMileageChart.destroy();
+                }
+                
+                // Create the new chart
+                window.priceMileageChart = new Chart(ctx, {
+                    type: 'scatter',
+                    data: {
+                        datasets: [{
+                            label: 'Price vs Mileage',
+                            data: dataPoints,
+                            backgroundColor: 'rgba(255, 99, 132, 0.6)',
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            borderWidth: 1,
+                            pointRadius: 6,
+                            pointHoverRadius: 9
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Price vs Mileage Relationship'
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const point = context.raw;
+                                        return [
+                                            `Price: $${point.y.toLocaleString()}`,
+                                            `Mileage: ${point.mileage}`,
+                                            `Year: ${point.year}`
+                                        ];
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Mileage'
+                                },
+                                ticks: {
+                                    callback: function(value) {
+                                        return value.toLocaleString();
+                                    }
+                                }
+                            },
+                            y: {
+                                beginAtZero: false,
+                                title: {
+                                    display: true,
+                                    text: 'Price ($)'
+                                },
+                                ticks: {
+                                    callback: function(value) {
+                                        return '$' + value.toLocaleString();
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            
+            // Function to populate similar cars table
+            function populateSimilarCarsTable(carsData) {
+                const tableBody = document.querySelector('#similarCarsTable tbody');
+                tableBody.innerHTML = ''; // Clear existing data
+                
+                carsData.forEach(car => {
+                    const row = document.createElement('tr');
+                    
+                    // Create and append cells
+                    const yearCell = document.createElement('td');
+                    yearCell.textContent = car.model_year;
+                    row.appendChild(yearCell);
+                    
+                    const mileageCell = document.createElement('td');
+                    mileageCell.textContent = car.milage;
+                    row.appendChild(mileageCell);
+                    
+                    const priceCell = document.createElement('td');
+                    priceCell.textContent = '$' + car.price.toLocaleString();
+                    row.appendChild(priceCell);
+                    
+                    const accidentCell = document.createElement('td');
+                    accidentCell.textContent = car.accident || 'N/A';
+                    row.appendChild(accidentCell);
+                    
+                    const colorCell = document.createElement('td');
+                    colorCell.textContent = car.ext_col || 'N/A';
+                    row.appendChild(colorCell);
+                    
+                    // Add the row to the table
+                    tableBody.appendChild(row);
+                });
+            }
         });
     </script>
 </body>
