@@ -121,7 +121,19 @@ app.post('/api/estimate', (req, res) => {
     priceRange: {
       min: Math.min(...similarCars.map(car => car.price)),
       max: Math.max(...similarCars.map(car => car.price))
-    }
+    },
+    // Include the similar cars data for visualization
+    similarCarsData: similarCars.map(car => ({
+      brand: car.brand,
+      model: car.model,
+      model_year: car.model_year,
+      milage: car.milage,
+      price: car.price,
+      accident: car.accident,
+      ext_col: car.ext_col,
+      int_col: car.int_col,
+      clean_title: car.clean_title
+    }))
   });
 });
 
