@@ -387,8 +387,42 @@
                     document.getElementById('result').style.display = 'block';
                     document.getElementById('chartsTab').style.display = 'block';
                     
-                    // If we have similar cars data, visualize it
-                    if (data.similarCarsData && data.similarCarsData.length > 0) {
+                    // If we don't have similarCarsData from API yet, create a basic visualization with price range
+                    if (!data.similarCarsData || data.similarCarsData.length === 0) {
+                        // Create dummy data based on min/max prices and number of similar cars
+                        const dummyData = [];
+                        const carCount = data.similarCars || 0;
+                        const minPrice = data.priceRange.min;
+                        const maxPrice = data.priceRange.max;
+                        
+                        // Create evenly distributed price points
+                        for (let i = 0; i < carCount; i++) {
+                            const price = minPrice + ((maxPrice - minPrice) / (carCount - 1)) * i;
+                            dummyData.push({
+                                price: Math.round(price),
+                                model_year: parseInt(document.getElementById('year').value, 10),
+                                milage: document.getElementById('mileage').value || 'Unknown',
+                                accident: 'N/A',
+                                ext_col: 'N/A'
+                            });
+                        }
+                        
+                        visualizePriceDistribution(dummyData);
+                        // Only show price distribution since we don't have real mileage data
+                        document.getElementById('priceMileageChart').parentElement.style.display = 'none';
+                        
+                        // Add a note to the table that this is estimated data
+                        const dummyTableData = [{
+                            model_year: parseInt(document.getElementById('year').value, 10),
+                            milage: document.getElementById('mileage').value || 'Unknown',
+                            price: data.estimatedPrice,
+                            accident: document.getElementById('accident').value === 'yes' ? 'Yes' : 'No',
+                            ext_col: 'N/A'
+                        }];
+                        
+                        populateSimilarCarsTable(dummyTableData);
+                    } else {
+                        // We have real data from the API
                         visualizePriceDistribution(data.similarCarsData);
                         visualizePriceVsMileage(data.similarCarsData);
                         populateSimilarCarsTable(data.similarCarsData);
@@ -435,7 +469,7 @@
                 const ctx = document.getElementById('priceDistChart').getContext('2d');
                 
                 // Clear any existing chart
-                if (window.priceDistChart) {
+                if (window.priceDistChart instanceof Chart) {
                     window.priceDistChart.destroy();
                 }
                 
@@ -517,7 +551,7 @@
                 const ctx = document.getElementById('priceMileageChart').getContext('2d');
                 
                 // Clear any existing chart
-                if (window.priceMileageChart) {
+                if (window.priceMileageChart instanceof Chart) {
                     window.priceMileageChart.destroy();
                 }
                 
