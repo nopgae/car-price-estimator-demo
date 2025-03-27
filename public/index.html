@@ -6,225 +6,233 @@
     <title>Car Price Estimator</title>
     <style>
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f5f5f5;
-        }
-        
-        .container {
+            font-family: Arial, sans-serif;
             max-width: 800px;
-            margin: 20px auto;
-            background-color: white;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-        }
-        
-        header {
-            background-color: #4a6fa5;
-            color: white;
-            padding: 20px;
-            text-align: center;
-        }
-        
-        .content {
+            margin: 0 auto;
             padding: 20px;
         }
-        
-        .upload-area {
-            border: 2px dashed #ccc;
-            border-radius: 5px;
-            padding: 30px;
+        .container {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
             text-align: center;
-            margin-bottom: 20px;
-            cursor: pointer;
         }
-        
-        .upload-area:hover {
-            border-color: #4a6fa5;
-            background-color: #f0f7ff;
+        .form-group {
+            margin-bottom: 15px;
         }
-        
-        .btn {
-            background-color: #4a6fa5;
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        select, input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #4CAF50;
             color: white;
+            padding: 10px 15px;
             border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
+            border-radius: 4px;
             cursor: pointer;
             font-size: 16px;
         }
-        
-        .btn:hover {
-            background-color: #3a5985;
+        button:hover {
+            background-color: #45a049;
         }
-        
-        #image-preview {
-            max-width: 100%;
-            max-height: 300px;
-            margin: 20px auto;
-            display: none;
-            border-radius: 5px;
-        }
-        
-        #result {
+        .result {
             margin-top: 20px;
-            padding: 20px;
-            background-color: #f9f9f9;
-            border-radius: 5px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #fff;
+            display: none;
+        }
+        .error {
+            color: red;
+            margin-top: 10px;
+        }
+        .loading {
+            text-align: center;
             display: none;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <header>
-            <h1>Car Price Estimator</h1>
-            <p>Upload a photo of a car to get an estimated price</p>
-        </header>
+        <h1>Car Price Estimator</h1>
         
-        <div class="content">
-            <div class="upload-area" id="upload-area">
-                <p>Drag & drop a car image here or click to select</p>
-                <input type="file" id="file-input" accept="image/*" style="display: none;">
-                <button class="btn" id="select-btn">Select Image</button>
-            </div>
-            
-            <img id="image-preview" src="" alt="Car Preview">
-            
-            <div id="result">
-                <h2>Price Estimate</h2>
-                <div id="car-info"></div>
-                <div id="price-estimate"></div>
-            </div>
+        <div class="form-group">
+            <label for="brand">Car Brand:</label>
+            <select id="brand">
+                <option value="">-- Select Brand --</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="model">Car Model:</label>
+            <select id="model">
+                <option value="">-- Select Model --</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="year">Year:</label>
+            <input type="number" id="year" min="1950" max="2025">
+        </div>
+        
+        <div class="form-group">
+            <label for="mileage">Mileage:</label>
+            <input type="text" id="mileage" placeholder="e.g. 50,000">
+        </div>
+        
+        <div class="form-group">
+            <label for="accident">Accident History:</label>
+            <select id="accident">
+                <option value="no">No accidents</option>
+                <option value="yes">Has accident history</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="cleanTitle">Clean Title:</label>
+            <select id="cleanTitle">
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
+            </select>
+        </div>
+        
+        <button id="estimateBtn">Estimate Price</button>
+        
+        <div class="loading" id="loading">
+            Calculating estimate...
+        </div>
+        
+        <div class="error" id="error"></div>
+        
+        <div class="result" id="result">
+            <h2>Estimated Price: <span id="estimatedPrice">$0</span></h2>
+            <p>Based on <span id="similarCars">0</span> similar vehicles</p>
+            <p>Price Range: <span id="minPrice">$0</span> - <span id="maxPrice">$0</span></p>
         </div>
     </div>
-    
+
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const uploadArea = document.getElementById('upload-area');
-            const fileInput = document.getElementById('file-input');
-            const selectBtn = document.getElementById('select-btn');
-            const imagePreview = document.getElementById('image-preview');
-            const result = document.getElementById('result');
-            const carInfo = document.getElementById('car-info');
-            const priceEstimate = document.getElementById('price-estimate');
+            // Load car brands on page load
+            fetch('/api/brands')
+                .then(response => response.json())
+                .then(brands => {
+                    const brandSelect = document.getElementById('brand');
+                    brands.forEach(brand => {
+                        const option = document.createElement('option');
+                        option.value = brand;
+                        option.textContent = brand;
+                        brandSelect.appendChild(option);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading brands:', error);
+                    document.getElementById('error').textContent = 'Failed to load car brands.';
+                });
             
-            // Click the hidden file input when the button is clicked
-            selectBtn.addEventListener('click', function() {
-                fileInput.click();
-            });
-            
-            // Handle file selection
-            fileInput.addEventListener('change', handleFileSelect);
-            
-            // Handle drag and drop
-            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-                uploadArea.addEventListener(eventName, preventDefaults, false);
-            });
-            
-            function preventDefaults(e) {
-                e.preventDefault();
-                e.stopPropagation();
-            }
-            
-            ['dragenter', 'dragover'].forEach(eventName => {
-                uploadArea.addEventListener(eventName, highlight, false);
-            });
-            
-            ['dragleave', 'drop'].forEach(eventName => {
-                uploadArea.addEventListener(eventName, unhighlight, false);
-            });
-            
-            function highlight() {
-                uploadArea.style.borderColor = '#4a6fa5';
-                uploadArea.style.backgroundColor = '#f0f7ff';
-            }
-            
-            function unhighlight() {
-                uploadArea.style.borderColor = '#ccc';
-                uploadArea.style.backgroundColor = 'white';
-            }
-            
-            uploadArea.addEventListener('drop', handleDrop, false);
-            
-            function handleDrop(e) {
-                const dt = e.dataTransfer;
-                const files = dt.files;
+            // Load models when brand changes
+            document.getElementById('brand').addEventListener('change', function() {
+                const brand = this.value;
+                const modelSelect = document.getElementById('model');
                 
-                if (files.length) {
-                    fileInput.files = files;
-                    handleFileSelect();
+                // Clear existing options
+                modelSelect.innerHTML = '<option value="">-- Select Model --</option>';
+                
+                if (brand) {
+                    fetch(`/api/models/${brand}`)
+                        .then(response => response.json())
+                        .then(models => {
+                            models.forEach(model => {
+                                const option = document.createElement('option');
+                                option.value = model;
+                                option.textContent = model;
+                                modelSelect.appendChild(option);
+                            });
+                        })
+                        .catch(error => {
+                            console.error('Error loading models:', error);
+                            document.getElementById('error').textContent = 'Failed to load car models.';
+                        });
                 }
-            }
+            });
             
-            function handleFileSelect() {
-                const file = fileInput.files[0];
+            // Handle estimate button click
+            document.getElementById('estimateBtn').addEventListener('click', function() {
+                const brand = document.getElementById('brand').value;
+                const model = document.getElementById('model').value;
+                const year = document.getElementById('year').value;
+                const mileage = document.getElementById('mileage').value;
+                const accident = document.getElementById('accident').value;
+                const cleanTitle = document.getElementById('cleanTitle').value;
                 
-                if (file && file.type.match('image.*')) {
-                    const reader = new FileReader();
-                    
-                    reader.onload = function(e) {
-                        imagePreview.src = e.target.result;
-                        imagePreview.style.display = 'block';
-                        
-                        // Simulate car recognition (in a real app, we would send to server)
-                        simulateCarRecognition();
-                    };
-                    
-                    reader.readAsDataURL(file);
+                // Validate inputs
+                if (!brand || !model || !year) {
+                    document.getElementById('error').textContent = 'Please fill in all required fields (brand, model, year).';
+                    return;
                 }
-            }
+                
+                // Clear previous results and errors
+                document.getElementById('error').textContent = '';
+                document.getElementById('result').style.display = 'none';
+                document.getElementById('loading').style.display = 'block';
+                
+                // Send estimate request
+                fetch('/api/estimate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        brand,
+                        model,
+                        year,
+                        mileage,
+                        accident,
+                        cleanTitle
+                    })
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(data => {
+                            throw new Error(data.error || 'Failed to estimate price');
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    document.getElementById('estimatedPrice').textContent = '$' + data.estimatedPrice.toLocaleString();
+                    document.getElementById('similarCars').textContent = data.similarCars;
+                    document.getElementById('minPrice').textContent = '$' + data.priceRange.min.toLocaleString();
+                    document.getElementById('maxPrice').textContent = '$' + data.priceRange.max.toLocaleString();
+                    document.getElementById('result').style.display = 'block';
+                })
+                .catch(error => {
+                    document.getElementById('error').textContent = error.message;
+                })
+                .finally(() => {
+                    document.getElementById('loading').style.display = 'none';
+                });
+            });
             
-            function simulateCarRecognition() {
-                // In a real app, we would upload the image to the server
-                // For this demo, we'll just simulate a response
-                
-                // Show loading state
-                carInfo.innerHTML = '<p>Analyzing car image...</p>';
-                result.style.display = 'block';
-                
-                // Simulate API delay
-                setTimeout(function() {
-                    // Simulate car recognition
-                    const brands = ['Toyota', 'Honda', 'Ford', 'Chevrolet', 'BMW'];
-                    const models = {
-                        'Toyota': ['Camry', 'Corolla', 'RAV4'],
-                        'Honda': ['Civic', 'Accord', 'CR-V'],
-                        'Ford': ['F-150', 'Escape', 'Mustang'],
-                        'Chevrolet': ['Silverado', 'Equinox', 'Malibu'],
-                        'BMW': ['3 Series', '5 Series', 'X5']
-                    };
-                    
-                    const brand = brands[Math.floor(Math.random() * brands.length)];
-                    const model = models[brand][Math.floor(Math.random() * models[brand].length)];
-                    const year = Math.floor(Math.random() * (2024 - 2015 + 1)) + 2015;
-                    
-                    // Generate a price range
-                    const basePrice = Math.floor(Math.random() * (40000 - 15000 + 1)) + 15000;
-                    const minPrice = basePrice - 3000;
-                    const maxPrice = basePrice + 5000;
-                    
-                    // Update UI with car info
-                    carInfo.innerHTML = `
-                        <p><strong>Make:</strong> ${brand}</p>
-                        <p><strong>Model:</strong> ${model}</p>
-                        <p><strong>Year:</strong> ${year}</p>
-                        <p><strong>Condition:</strong> ${['Excellent', 'Good', 'Very Good', 'Fair'][Math.floor(Math.random() * 4)]}</p>
-                    `;
-                    
-                    // Update UI with price estimate
-                    priceEstimate.innerHTML = `
-                        <h3>Estimated Value</h3>
-                        <p style="font-size: 24px; font-weight: bold; color: #4a6fa5;">
-                            $${minPrice.toLocaleString()} - $${maxPrice.toLocaleString()}
-                        </p>
-                        <p><small>Based on similar vehicles in the market</small></p>
-                    `;
-                    
-                }, 2000);
-            }
+            // Auto-populate year dropdown with range from 1990 to current year
+            const yearInput = document.getElementById('year');
+            const currentYear = new Date().getFullYear();
+            yearInput.max = currentYear;
+            yearInput.value = currentYear - 3; // Default to 3 years old
         });
     </script>
 </body>
