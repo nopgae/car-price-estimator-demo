@@ -24,6 +24,6 @@ Initialize git in your project folder and push:
 Copygit init
 git add .
 git commit -m "Initial commit"
-git remote add origin https://github.com/YOUR_USERNAME/car-price-estimator.git
+git remote add origin https://github.com/nopgae/car-price-estimator.git
 git push -u origin main
 
