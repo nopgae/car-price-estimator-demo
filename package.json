@@ -1,0 +1,27 @@
+{
+    "name": "car-price-estimator-demo",
+    "version": "1.0.0",
+    "description": "A demo application for car price estimation",
+    "main": "index.js",
+    "scripts": {
+      "start": "node index.js",
+      "dev": "nodemon index.js"
+    },
+    "keywords": [
+      "car",
+      "price",
+      "estimation",
+      "demo"
+    ],
+    "author": "",
+    "license": "MIT",
+    "dependencies": {
+      "express": "^4.18.2",
+      "multer": "^1.4.5-lts.1",
+      "papaparse": "^5.4.1",
+      "uuid": "^9.0.1"
+    },
+    "devDependencies": {
+      "nodemon": "^3.0.1"
+    }
+  }
