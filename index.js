@@ -13,7 +13,11 @@ const storage = multer.diskStorage({
     cb(null, 'uploads/');
   },
   filename: function(req, file, cb) {
-    cb(null, file.originalname);
+    const allowedExt = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+    const ext = path.extname(file.originalname).toLowerCase();
+    const safeExt = allowedExt.includes(ext) ? ext : '';
+    const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+    cb(null, `${uniqueSuffix}${safeExt}`);
   }
 });
 
@@ -143,9 +147,9 @@ app.post('/api/upload', upload.single('carData'), (req, res) => {
     return res.status(400).json({ error: 'No file uploaded' });
   }
   
-  res.json({ 
-    message: 'File uploaded successfully', 
-    filename: req.file.originalname 
+  res.json({
+    message: 'File uploaded successfully',
+    filename: req.file.filename
   });
 });
 
