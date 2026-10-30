@@ -1,86 +1,36 @@
 # Car Price Estimator Demo
 
-A demo application that allows users to upload car images and receive price estimates based on the vehicle's make, model, and year. The application simulates car recognition and uses a database of used cars to provide realistic price estimates.
+A small Express + vanilla JS app that estimates a used car's price from comparable listings. Pick a brand, model and year (plus optional mileage, accident history and title status), and the app averages the prices of similar cars in a 4,009-listing dataset and shows the price spread and a price-vs-mileage chart.
 
-## Features
+## How the estimate works
 
-- Upload car images via drag-and-drop or file browser
-- Simulated car recognition (make, model, year)
-- Price estimation based on real used car data
-- Display of similar vehicles for comparison
-- Interactive chat-like interface
+1. Comparable cars = same brand and model, model year within ±2 years (`data/used_cars.csv`: 57 brands, model years 1974–2024).
+2. Start from the mean price of those cars.
+3. Adjust by $0.10 per mile of difference from their average mileage, −15% if there was an accident, −20% if the title is not clean.
+4. Return the estimate, the min/max of the comparables, and the comparables themselves for the charts and table.
 
 ## Project Structure
 
 ```
 car-price-estimator-demo/
-├── index.js                # Express server
-├── package.json            # Dependencies and scripts
-├── README.md               # This file
-├── public/                 # Static files folder
-│   ├── index.html          # Main frontend
-│   └── test.html           # Test page
-├── data/                   # Data folder for CSV
-│   └── used_cars.csv       # Car price dataset
-└── uploads/                # Folder for uploaded images
+├── index.js            # Express server: /api/brands, /api/models/:brand, /api/estimate
+├── public/index.html   # Form, charts (Chart.js), similar-cars table
+├── data/used_cars.csv  # Used-car listings (price, mileage, accident, title, ...)
+└── package.json
 ```
 
-## Prerequisites
-
-- Node.js 14.x or higher
-- npm 6.x or higher
-
-## Installation
-
-1. Clone this repository or extract the files
-2. Install dependencies:
+## Run
 
 ```bash
 npm install
+npm start          # http://localhost:3000
 ```
 
-3. Make sure the CSV file is in the data directory:
+## Limitations
 
-```bash
-mkdir -p data
-cp /path/to/your/used_cars.csv data/
-```
-
-## Running the Application
-
-Start the server:
-
-```bash
-npm start
-```
-
-For development with auto-reload:
-
-```bash
-npm run dev
-```
-
-The application will be available at http://localhost:3000
-
-## Testing
-
-1. First, visit http://localhost:3000/test.html to check if the server is running properly
-2. Click "Check Server Status" to verify the API is working
-3. Click "Get Car Data" to confirm the car database is loaded
-4. Once all tests pass, proceed to the main application
-
-## Development Notes
-
-- The car recognition feature is simulated and would typically be replaced with a real computer vision API in a production environment
-- The price estimation algorithm uses actual used car data when available
-- For demonstration purposes, some values are randomized when specific data is not available
-
-## Troubleshooting
-
-- **Server won't start**: Check for processes already using port 3000
-- **Can't load index.html**: Verify the file exists in the public directory
-- **CSV not loading**: Ensure the file is properly placed in the data directory
-- **Image upload fails**: Check the uploads directory permissions
+- The adjustments (−$0.10/mile, −15%, −20%) are hand-picked rules, not fitted to the data, and the estimate was not validated against held-out listings.
+- No image recognition: the app takes make/model/year from the form. `index.js` still has an unused `/api/upload` endpoint, and `public/test.html` calls endpoints (`/api/status`, `/api/cars`) that don't exist.
+- Models with no listing within ±2 years return "Not enough data" rather than an estimate.
 
 ## License
 
