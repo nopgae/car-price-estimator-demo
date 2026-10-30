@@ -1,5 +1,4 @@
 const express = require('express');
-const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
 const csvParser = require('csv-parser');
@@ -7,21 +6,6 @@ const csvParser = require('csv-parser');
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Set up file upload storage
-const storage = multer.diskStorage({
-  destination: function(req, file, cb) {
-    cb(null, 'uploads/');
-  },
-  filename: function(req, file, cb) {
-    const allowedExt = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
-    const ext = path.extname(file.originalname).toLowerCase();
-    const safeExt = allowedExt.includes(ext) ? ext : '';
-    const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-    cb(null, `${uniqueSuffix}${safeExt}`);
-  }
-});
-
-const upload = multer({ storage: storage });
 
 // Serve static files from the public directory
 app.use(express.static('public'));
@@ -140,24 +124,6 @@ app.post('/api/estimate', (req, res) => {
     }))
   });
 });
-
-// Endpoint to upload a new car listing
-app.post('/api/upload', upload.single('carData'), (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ error: 'No file uploaded' });
-  }
-  
-  res.json({
-    message: 'File uploaded successfully',
-    filename: req.file.filename
-  });
-});
-
-// Create uploads directory if it doesn't exist
-const uploadsDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir);
-}
 
 // Start the server
 app.listen(port, () => {

@@ -29,7 +29,7 @@ npm start          # http://localhost:3000
 ## Limitations
 
 - The adjustments (−$0.10/mile, −15%, −20%) are hand-picked rules, not fitted to the data, and the estimate was not validated against held-out listings.
-- No image recognition: the app takes make/model/year from the form. `index.js` still has an unused `/api/upload` endpoint, and `public/test.html` calls endpoints (`/api/status`, `/api/cars`) that don't exist.
+- No image recognition: the app takes make/model/year from the form.
 - Models with no listing within ±2 years return "Not enough data" rather than an estimate.
 
 ## License
